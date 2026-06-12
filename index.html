@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red de Curiosidades</title>
+    <!-- Cargamos los estilos del juego -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Fuente de Google Fonts para un diseño moderno y limpio -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- ==========================================
+         VISTA PARTICIPANTE (CELULAR)
+         Se muestra por defecto
+         ========================================== -->
+    <div id="vista-participante" class="vista">
+        
+        <!-- Fase 0: Registro de Datos -->
+        <div id="seccion-registro" class="tarjeta-pantalla">
+            <h1 class="titulo-app">Red de Curiosidades</h1>
+            <p class="instruccion">Escribe tu nombre y responde las siguientes 3 preguntas curiosas para ingresar al juego.</p>
+            <form id="formulario-registro">
+                <div class="campo">
+                    <label for="reg-nombre">¿Cómo te llamas?</label>
+                    <input type="text" id="reg-nombre" placeholder="Escribe tu nombre" required autocomplete="off">
+                </div>
+                
+                <!-- Aquí se inyectan las 3 preguntas aleatorias desde JS -->
+                <div id="preguntas-dinamicas"></div>
+                
+                <button type="submit" class="boton-primario">Unirme al Juego</button>
+            </form>
+        </div>
+
+        <!-- Fase 0: Espera de Inicio -->
+        <div id="seccion-espera" class="tarjeta-pantalla oculta">
+            <div class="animacion-carga"></div>
+            <h2>¡Te has registrado!</h2>
+            <p>Hola <span id="nombre-espera"></span>, prepárate. El moderador iniciará el juego pronto en la pantalla grande...</p>
+        </div>
+
+        <!-- Fase 1: Juego Activo (Adivinar) -->
+        <div id="seccion-juego" class="tarjeta-pantalla oculta">
+            <header class="cabecera-juego">
+                <div class="info-jugador">
+                    <span class="nombre-jugador" id="jugador-activo-nombre">Jugador</span>
+                    <span class="puntos-jugador" id="jugador-activo-puntos">0 pts</span>
+                </div>
+            </header>
+
+            <!-- Alertas de Match Pendiente (Doble Confirmación) -->
+            <div id="notificacion-match" class="notificacion oculta">
+                <p id="texto-notificacion">Alguien quiere confirmar un match contigo...</p>
+                <div class="botones-notificacion">
+                    <button id="btn-confirmar-match" class="btn-notif btn-confirmar">Aceptar Match</button>
+                    <button id="btn-rechazar-match" class="btn-notif btn-rechazar">Rechazar</button>
+                </div>
+            </div>
+
+            <main class="contenido-juego">
+                <h2>Adivina a quién pertenecen:</h2>
+                <p class="subinstruccion">Selecciona una respuesta anónima y asigna a la persona correspondiente.</p>
+                
+                <!-- Lista de respuestas del grupo -->
+                <div id="lista-respuestas" class="lista-respuestas">
+                    <!-- Se llena con JS -->
+                </div>
+            </main>
+        </div>
+
+        <!-- Modal para elegir participantes y proponer match -->
+        <div id="modal-match" class="modal oculta">
+            <div class="modal-contenido">
+                <span class="cerrar-modal" id="btn-cerrar-modal">&times;</span>
+                <h3>¿Quién respondió esto?</h3>
+                <blockquote id="modal-dato-texto">"Respuesta"</blockquote>
+                
+                <div class="campo">
+                    <label for="selector-participantes">Selecciona al compañero:</label>
+                    <select id="selector-participantes">
+                        <option value="">-- Elige a un compañero --</option>
+                        <!-- Se llena con JS -->
+                    </select>
+                </div>
+                
+                <p class="aviso-modal">Acércate físicamente a la persona antes de presionar el botón.</p>
+                <button id="btn-enviar-propuesta" class="boton-primario">Proponer Match</button>
+            </div>
+        </div>
+
+        <!-- Fase 2: Fin del Juego -->
+        <div id="seccion-fin" class="tarjeta-pantalla oculta">
+            <h2>El juego ha terminado</h2>
+            <p>Mira la pantalla grande para ver el podio final y las respuestas reveladas de todos.</p>
+            <div class="resumen-puntos">
+                Tu puntuación final: <strong id="puntos-finales">0</strong>
+            </div>
+        </div>
+
+        <!-- Modal de Alerta Personalizada (Llamativa e Interactiva) -->
+        <div id="alerta-custom" class="modal oculta">
+            <div class="modal-contenido alerta-custom-tarjeta">
+                <span class="cerrar-modal" id="btn-alerta-custom-cerrar-x">&times;</span>
+                <div class="alerta-custom-cuerpo">
+                    <div id="alerta-custom-icono" class="alerta-custom-icono">🚨</div>
+                    <h3 id="alerta-custom-titulo" class="alerta-custom-titulo">¡Notificación!</h3>
+                    <p id="alerta-custom-mensaje" class="alerta-custom-mensaje">Mensaje de la alerta...</p>
+                    <button id="btn-alerta-custom-cerrar" class="boton-primario" style="margin-top: 15px;">Entendido</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- ==========================================
+         VISTA PANTALLA GRANDE (PROYECTOR)
+         Se activa agregando ?pantalla=true
+         ========================================== -->
+    <div id="vista-pantalla-grande" class="vista oculta">
+        
+        <!-- Configuración Inicial del Moderador -->
+        <div id="seccion-moderador" class="tarjeta-pantalla-grande">
+            <h1 class="titulo-moderador">Red de Curiosidades</h1>
+            
+            <div class="configuracion-preguntas">
+                <h2>Reglas de la Actividad</h2>
+                <div class="tarjeta-reglas">
+                    <p><strong>1. Registro:</strong> Escanea el código QR y responde tus 3 preguntas asignadas al azar.</p>
+                    <p><strong>2. Interacción:</strong> Ve las respuestas del grupo, adivina quién las dio, ve con esa persona y confirma en ambos celulares.</p>
+                    <p><strong>3. Puntuación:</strong> Matches correctos otorgan <strong>+2 puntos</strong>. Matches incorrectos restan <strong>-1 punto</strong>.</p>
+                </div>
+                <div class="instruccion-qr">
+                    <p class="texto-destacado">Escanea el código QR de la sala para jugar</p>
+                </div>
+            </div>
+
+            <div class="estado-registro-moderador">
+                <h2>Jugadores Conectados (<span id="contador-registrados">0</span>)</h2>
+                <ul id="lista-participantes-registrados">
+                    <!-- Se llena con JS -->
+                </ul>
+                <button id="btn-iniciar-juego" class="boton-iniciar">Iniciar Actividad (22 Minutos)</button>
+                <button id="btn-reiniciar-todo-mod" class="boton-peligro-discreto" style="margin-top: 10px; width: 100%;">Reiniciar Base de Datos</button>
+            </div>
+        </div>
+
+        <!-- Panel del Juego Activo (Grafo y Marcador) -->
+        <div id="seccion-juego-grande" class="layout-pantalla-grande oculta">
+            
+            <!-- Columna Izquierda: Cronómetro y Leaderboard -->
+            <div class="columna-lateral">
+                <div class="tarjeta-cronometro">
+                    <h3>Tiempo Restante</h3>
+                    <div id="cronometro">22:00</div>
+                    <button id="btn-finalizar-juego" class="boton-peligro-discreto">Finalizar Actividad</button>
+                    <button id="btn-reiniciar-todo-juego" class="boton-peligro-discreto" style="margin-top: 6px;">Reiniciar Todo</button>
+                </div>
+                
+                <div class="tarjeta-leaderboard">
+                    <h3>Marcador en Tiempo Real</h3>
+                    <ol id="leaderboard">
+                        <!-- Se llena con JS -->
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Columna Derecha/Centro: El Grafo Social -->
+            <div class="panel-grafo">
+                <svg id="svg-grafo"></svg>
+            </div>
+        </div>
+
+        <!-- Cierre del Juego y Revelaciones -->
+        <div id="seccion-cierre-grande" class="layout-pantalla-grande-cierre oculta">
+            
+            <!-- Columna Lateral Izquierda: Podio de Ganadores -->
+            <div class="columna-lateral">
+                <div class="tarjeta-cronometro finalizado">
+                    <h3>Juego Finalizado</h3>
+                    <button id="btn-reiniciar-todo-cierre" class="boton-peligro-discreto" style="margin-top: 6px;">Reiniciar Todo</button>
+                </div>
+                <div class="tarjeta-leaderboard final-podio">
+                    <h3>Podio de Ganadores 🏆</h3>
+                    
+                    <!-- Podio Físico Visual en 3D -->
+                    <div class="podio-visual-contenedor">
+                        <!-- Segundo Puesto (Plata) -->
+                        <div class="podio-columna puesto-2">
+                            <div class="podio-avatar">🥈</div>
+                            <div class="podio-nombre" id="podio-2-nombre">Cargando...</div>
+                            <div class="podio-barra">
+                                <span class="podio-puntos" id="podio-2-puntos">0 pts</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Primer Puesto (Oro) -->
+                        <div class="podio-columna puesto-1">
+                            <div class="podio-avatar-corona">👑</div>
+                            <div class="podio-avatar">🥇</div>
+                            <div class="podio-nombre" id="podio-1-nombre">Cargando...</div>
+                            <div class="podio-barra">
+                                <span class="podio-puntos" id="podio-1-puntos">0 pts</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Tercer Puesto (Bronce) -->
+                        <div class="podio-columna puesto-3">
+                            <div class="podio-avatar">🥉</div>
+                            <div class="podio-nombre" id="podio-3-nombre">Cargando...</div>
+                            <div class="podio-barra">
+                                <span class="podio-puntos" id="podio-3-puntos">0 pts</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resto de la Clasificación (Puesto 4+) -->
+                    <div class="resto-clasificacion">
+                        <h4>Clasificación General</h4>
+                        <ol id="leaderboard-final" class="podio-lista-resto">
+                            <!-- Se llena con JS para los puestos del 4 en adelante -->
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Panel Central: El Grafo SVG final (Reducido de ancho para dar espacio al carrusel) -->
+            <div class="panel-grafo-cierre">
+                <svg id="svg-grafo-final"></svg>
+            </div>
+
+            <!-- Panel Lateral Derecho: Carrusel Automático de Respuestas -->
+            <div class="columna-revelacion-automatica">
+                <div class="tarjeta-revelacion-automatica">
+                    <h3>Curiosidades en Vivo 🔍</h3>
+                    
+                    <div id="revelacion-carrusel-tarjeta" class="carrusel-tarjeta">
+                        <div class="carrusel-cabecera">
+                            <span class="carrusel-avatar">👤</span>
+                            <h2 id="carrusel-nombre">Cargando...</h2>
+                        </div>
+                        <div id="carrusel-respuestas-caja" class="carrusel-respuestas-caja">
+                            <!-- Respuestas cargadas automáticamente por JS -->
+                        </div>
+                    </div>
+                    
+                    <p class="carrusel-aviso">Revelando al grupo de forma automática</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ==========================================
+         LIBRERÍAS DE TERCEROS (Firebase y D3.js)
+         ========================================== -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <!-- Nuestro archivo de lógica JS -->
+    <script src="app.js"></script>
+</body>
+</html>
