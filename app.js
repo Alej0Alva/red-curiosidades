@@ -762,7 +762,12 @@ function shuffle(array) {
 // Modal match
 function abrirModalMatch(itemRespuesta) {
     respuestaSeleccionada = itemRespuesta;
-    modalDatoTexto.textContent = `"${itemRespuesta.texto}"`;
+    modalDatoTexto.innerHTML = `
+        <strong style="color: var(--color-primario); display: block; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 4px;">Pregunta:</strong>
+        <span style="font-weight: 600; display: block; margin-bottom: 8px; color: var(--color-texto-principal);">${itemRespuesta.preguntaTexto}</span>
+        <strong style="color: var(--color-exito); display: block; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 4px;">Respuesta:</strong>
+        <em style="color: var(--color-texto-secundario); font-size: 0.95rem;">"${itemRespuesta.texto}"</em>
+    `;
     
     // Resetear compañero seleccionado
     compañeroSeleccionadoId = null;
