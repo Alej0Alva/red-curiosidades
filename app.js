@@ -19,36 +19,46 @@ const db = firebase.database();
 
 // 2. BANCO DE PREGUNTAS CURIOAS (Paso 6 - Mejorado)
 const bancoPreguntas = [
-    "¿Cuál es tu comida favorita a la medianoche?",
-    "Si pudieras viajar a cualquier año en el pasado o futuro, ¿a cuál irías?",
-    "¿Cuál es el objeto más inútil pero genial que tienes en tu habitación?",
-    "Si fueras un animal en tu oficina/clase, ¿cuál serías y por qué?",
-    "¿Cuál es la fobia o miedo más extraño o gracioso que tienes?",
-    "¿Qué canción cantarías en un karaoke para salvar tu vida?",
-    "¿Cuál ha sido tu peor corte de cabello o desastre estético?",
-    "Si tuvieras que comer un solo plato por el resto de tu vida, ¿cuál sería?",
-    "¿Cuál es tu talento secreto más inútil pero sorprendente?",
-    "¿Qué película 'mala' te encanta y no te da vergüenza admitir?",
-    "¿Qué es lo más extraño o exótico que has comido en tu vida?",
-    "Si pudieras hablar 1 hora con un personaje histórico, ¿a quién elegirías?",
-    "¿Cuál es tu costumbre o manía más extraña al trabajar o estudiar?",
-    "Si ganaras la lotería mañana, ¿qué sería lo primero (absurdo) que comprarías?",
-    "¿Qué serie de televisión has visto completa más de tres veces?",
-    "¿Qué olor o aroma extraño te gusta de manera secreta?",
-    "¿Cuál ha sido tu peor o más divertida experiencia en transporte público?",
-    "¿De qué tema o hobby podrías hablar por 30 minutos sin preparación?",
-    "¿Cuál es la última búsqueda extraña o divertida que hiciste en tu celular?",
-    "¿Qué único objeto llevarías a una isla desierta si pudieras?",
-    "¿Cuál ha sido el trabajo, tarea o pasatiempo más raro que has tenido?",
-    "¿Qué combinación extraña de comida te encanta pero a otros les da asco?",
-    "¿Quién era tu personaje de ficción o caricatura favorito en la infancia?",
-    "¿Qué canción te pone de buen humor de forma instantánea al escucharla?",
-    "¿Cuál es tu lugar favorito para relajarte cuando tienes mucho estrés?",
-    "¿Cuál es tu juego de mesa o videojuego favorito de todos los tiempos?",
-    "¿Qué comida o ingrediente no soportas comer bajo ninguna circunstancia?",
-    "Si pudieras aprender un idioma nuevo mágicamente en un segundo, ¿cuál sería?",
-    "¿Cuál ha sido el viaje o paseo más accidentado pero divertido que has hecho?",
-    "Si tuvieras que cambiar tu nombre por el de un objeto o fruta, ¿cuál elegirías?"
+    "Si el PIB de Colombia fuera una persona, ¿qué tan dramática sería su reacción cada vez que sube la inflación?",
+    "¿Cuántas reuniones de seguimiento crees que necesitaría Dios para aprobar la creación del universo si hubiera tenido un departamento de administración?",
+    "Si la contabilidad fuera un deporte olímpico, ¿en qué evento crees que Colombia ganaría medalla de oro?",
+    "¿Qué pasaría si un economista, un administrador y un contador se perdieran juntos en el bosque? ¿Quién sobrevive más tiempo y por qué?",
+    "Si el balance general de tu vida personal fuera auditado hoy, ¿qué rubros estarían en rojo?",
+    "¿Cuál crees que es el activo más sobrevalorado de la historia: el tulipán holandés, el Bitcoin en 2021 o tu motivación un lunes a las 7am?",
+    "Si la economía colombiana fuera un estudiante de la Nacional, ¿en qué semestre estaría y cuántas materias habría perdido?",
+    "¿Qué empresa famosa crees que quebraría en menos de una semana si la administrara tu yo de hace cinco años?",
+    "Si la oferta y la demanda fueran dos personas en una relación, ¿cómo describirías su dinámica amorosa?",
+    "¿Cuánto cobrarías por hora si pudieras facturarle a tu familia cada vez que te piden que les expliques por qué sube el dólar?",
+    "Si los perros pudieran votar, ¿qué partido político crees que ganarían las elecciones?",
+    "¿Cuántos patos crees que podrías cargar al mismo tiempo antes de rendirte?",
+    "Si tuvieras que oler igual a un alimento por el resto de tu vida, ¿cuál elegirías para no arruinar tu vida social?",
+    "¿Pelearías contra un caballo del tamaño de un gato o contra un gato del tamaño de un caballo?",
+    "Si el Wi-Fi dejara de existir mañana, ¿en cuántos días colapsarías completamente como persona?",
+    "¿Qué trabajo crees que harías mejor: catador oficial de colchones o juez de concursos de bostezos?",
+    "Si tu personalidad fuera un sonido de notificación, ¿cuál sería?",
+    "¿Cuánto dinero necesitarías para comerte un insecto frente a todo el grupo ahora mismo?",
+    "Si pudieras reemplazar todas las escaleras del mundo por un solo objeto alternativo, ¿qué pondrías?",
+    "¿Qué harías si te despiertas mañana y descubres que todos los demás humanos del planeta desaparecieron pero los animales siguen ahí?",
+    "¿Cuál es tu talento secreto que casi nadie en la UACE sabe que tienes?",
+    "¿A qué le tienes un miedo irracional que sabes que no tiene mucho sentido?",
+    "Si pudieras eliminar una materia de la universidad para siempre, ¿cuál sería?",
+    "¿Cuál es la opinión impopular que defiendes con más convicción?",
+    "¿Qué canción te sería imposible no cantar si la pusieran en este momento?",
+    "¿En qué momento de tu vida has actuado con más valentía?",
+    "¿Cuál es la habilidad que más envidia te da cuando la ves en otras personas?",
+    "¿Qué harías mañana si supieras que no puedes fallar?",
+    "¿Cuál es la decisión más impulsiva que has tomado y de la que no te arrepientes?",
+    "Si tu forma de estudiar fuera un animal, ¿cuál sería y por qué?",
+    "¿Cuál es la cosa más rara que comes o la combinación de comida más extraña que te gusta?",
+    "¿Qué serie, película o libro cambió genuinamente tu forma de pensar?",
+    "¿En qué momento de tu vida has reído más fuerte o más tiempo sin poder parar?",
+    "Si tuvieras que vivir en otro país por un año obligatoriamente, ¿a cuál irías y por qué?",
+    "¿Qué creías de niño que era verdad absoluta y hoy sabes que estabas completamente equivocado?",
+    "¿Cuál es el consejo que más odias recibir pero que en el fondo sabes que es correcto?",
+    "¿Qué parte de tu rutina diaria te genera más culpa pero igual sigues haciendo?",
+    "Si pudieras tener una conversación de una hora con cualquier persona viva o muerta, ¿con quién sería?",
+    "¿Cuál es la cosa más pequeña que tiene el poder de arruinarte el día?",
+    "¿Qué es lo primero que harías si te dieran un mes libre pagado sin ninguna obligación?"
 ];
 
 // 3. REFERENCIAS A ELEMENTOS DE LA INTERFAZ (DOM)
@@ -166,16 +176,15 @@ function inicializarPantallaGrande() {
             return;
         }
 
-        const duracionMs = 22 * 60 * 1000;
         const ahora = Date.now();
-        const timestampFin = ahora + duracionMs;
 
         db.ref("estado_juego").set({
             iniciado: true,
             finalizado: false,
-            timestamp_fin: timestampFin
+            timestamp_inicio: ahora
         });
     });
+
 
     // Botón para finalizar anticipadamente el juego
     btnFinalizarJuego.addEventListener("click", () => {
@@ -212,7 +221,7 @@ function inicializarPantallaGrande() {
                 seccionJuegoGrande.classList.remove("oculta");
                 seccionCierreGrande.classList.add("oculta");
                 if (intervaloCarrusel) clearInterval(intervaloCarrusel);
-                iniciarCronometroLocal(estado.timestamp_fin);
+                iniciarCronometroLocal(estado.timestamp_inicio);
                 inicializarGrafoVisual(false); // Grafo activo
             }
         } else {
@@ -225,18 +234,16 @@ function inicializarPantallaGrande() {
     });
 }
 
-// Cronómetro
-function iniciarCronometroLocal(timestampFin) {
+// Cronómetro (Cronometra el tiempo transcurrido desde el inicio de la actividad)
+function iniciarCronometroLocal(timestampInicio) {
     pararCronometroLocal();
 
     function actualizarTiempo() {
         const ahora = Date.now();
-        const diferenciaMs = timestampFin - ahora;
+        const diferenciaMs = ahora - timestampInicio;
 
-        if (diferenciaMs <= 0) {
-            pararCronometroLocal();
+        if (diferenciaMs < 0) {
             elCronometro.textContent = "00:00";
-            db.ref("estado_juego/finalizado").set(true);
             return;
         }
 
@@ -247,12 +254,6 @@ function iniciarCronometroLocal(timestampFin) {
         const strSegundos = segundos.toString().padStart(2, '0');
 
         elCronometro.textContent = `${strMinutos}:${strSegundos}`;
-
-        if (minutos < 2) {
-            elCronometro.classList.add("alerta-tiempo");
-        } else {
-            elCronometro.classList.remove("alerta-tiempo");
-        }
     }
 
     actualizarTiempo();
@@ -433,29 +434,73 @@ function inicializarParticipante() {
     });
 }
 
-// Inyectar preguntas aleatorias en el HTML
+// Inyectar preguntas balanceadas y aleatorias en el HTML
 function generarPreguntasRegistroDinamicas() {
-    preguntasDinamicasContenedor.innerHTML = "";
+    preguntasDinamicasContenedor.innerHTML = "<p style='text-align:center;color:var(--color-texto-secundario);'>Cargando preguntas...</p>";
     
-    // Barajar índice de preguntas
-    const indices = Array.from({length: bancoPreguntas.length}, (_, i) => i);
-    shuffle(indices);
-    
-    // Tomar las 3 primeras preguntas elegidas al azar
-    preguntasAsignadas = [
-        bancoPreguntas[indices[0]],
-        bancoPreguntas[indices[1]],
-        bancoPreguntas[indices[2]]
-    ];
+    // Obtener participantes registrados para ver qué preguntas tienen asignadas
+    db.ref("participantes").once("value", (snapshot) => {
+        const participantes = snapshot.val() || {};
+        
+        // Contar cuántas veces se ha asignado cada pregunta del banco
+        const conteoPreguntas = {};
+        bancoPreguntas.forEach(q => {
+            conteoPreguntas[q] = 0;
+        });
 
-    preguntasAsignadas.forEach((preg, idx) => {
-        const div = document.createElement("div");
-        div.className = "campo";
-        div.innerHTML = `
-            <label for="reg-p-${idx}">${preg}</label>
-            <input type="text" id="reg-p-${idx}" placeholder="Tu respuesta..." required autocomplete="off">
-        `;
-        preguntasDinamicasContenedor.appendChild(div);
+        Object.keys(participantes).forEach(pId => {
+            const p = participantes[pId];
+            if (p.preguntas) {
+                Object.keys(p.preguntas).forEach(qKey => {
+                    const textoPreg = p.preguntas[qKey].texto;
+                    if (textoPreg in conteoPreguntas) {
+                        conteoPreguntas[textoPreg]++;
+                    }
+                });
+            }
+        });
+
+        // Ordenar las preguntas del banco por asignaciones (menor a mayor)
+        const preguntasOrdenadas = [...bancoPreguntas].sort((a, b) => conteoPreguntas[a] - conteoPreguntas[b]);
+
+        // Tomar un grupo de las menos asignadas (ej. las primeras 12 para dar variedad aleatoria)
+        const poolMenosAsignadas = preguntasOrdenadas.slice(0, 12);
+        shuffle(poolMenosAsignadas);
+        
+        // Tomar las 3 primeras del pool mezclado
+        preguntasAsignadas = poolMenosAsignadas.slice(0, 3);
+
+        preguntasDinamicasContenedor.innerHTML = "";
+        preguntasAsignadas.forEach((preg, idx) => {
+            const div = document.createElement("div");
+            div.className = "campo";
+            div.innerHTML = `
+                <label for="reg-p-${idx}">${preg}</label>
+                <input type="text" id="reg-p-${idx}" placeholder="Tu respuesta..." required autocomplete="off">
+            `;
+            preguntasDinamicasContenedor.appendChild(div);
+        });
+    }).catch(err => {
+        console.error("Error al cargar preguntas balanceadas, usando fallback local:", err);
+        // Fallback: si falla Firebase, elegir al azar del banco localmente de inmediato
+        const indices = Array.from({length: bancoPreguntas.length}, (_, i) => i);
+        shuffle(indices);
+        preguntasAsignadas = [
+            bancoPreguntas[indices[0]],
+            bancoPreguntas[indices[1]],
+            bancoPreguntas[indices[2]]
+        ];
+        
+        preguntasDinamicasContenedor.innerHTML = "";
+        preguntasAsignadas.forEach((preg, idx) => {
+            const div = document.createElement("div");
+            div.className = "campo";
+            div.innerHTML = `
+                <label for="reg-p-${idx}">${preg}</label>
+                <input type="text" id="reg-p-${idx}" placeholder="Tu respuesta..." required autocomplete="off">
+            `;
+            preguntasDinamicasContenedor.appendChild(div);
+        });
     });
 }
 
@@ -1475,7 +1520,7 @@ function reiniciarTodoElJuego() {
             estado_juego: {
                 iniciado: false,
                 finalizado: false,
-                timestamp_fin: 0
+                timestamp_inicio: 0
             },
             preguntas_configuradas: {
                 p1: "¿Qué es lo que más te apasiona en la vida?",
