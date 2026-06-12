@@ -696,9 +696,47 @@ function cargarRespuestasAnonimasYCompañeros() {
         todosLosParticipantes = participantes;
 
         // Si aún no hemos inicializado el caché de respuestas, lo hacemos ahora
-        if (!respuestasAnonimasCache && Object.keys(participantes).length > 0) {
-            inicializarRespuestasCache(participantes);
-            pintarRespuestas();
+        if (!respuestasAnonimasCache) {
+            if (Object.keys(participantes).length > 0) {
+                inicializarRespuestasCache(participantes);
+                pintarRespuestas();
+            }
+        } else {
+            // Si ya existe el caché, verificamos si hay algún jugador nuevo (tardío)
+            // que no esté en nuestro caché actual para agregar sus respuestas
+            let nuevasRespuestas = [];
+            Object.keys(participantes).forEach(partId => {
+                if (partId === idUsuarioActual) return;
+                
+                // Verificamos si este participante ya tiene alguna respuesta en nuestro caché
+                const yaExisteEnCache = respuestasAnonimasCache.some(item => item.propietarioId === partId);
+                
+                if (!yaExisteEnCache) {
+                    // Es un participante nuevo (llegó tarde)! Agregamos sus respuestas
+                    const part = participantes[partId];
+                    const preg = part.preguntas || {};
+                    Object.keys(preg).forEach((pClave) => {
+                        const itemPreg = preg[pClave];
+                        if (itemPreg && itemPreg.respuesta) {
+                            const idRespuestaUnica = `${partId}_${pClave}`;
+                            nuevasRespuestas.push({
+                                id: idRespuestaUnica,
+                                propietarioId: partId,
+                                preguntaId: pClave,
+                                preguntaTexto: itemPreg.texto,
+                                texto: itemPreg.respuesta,
+                                yaAdivinada: false
+                            });
+                        }
+                    });
+                }
+            });
+
+            if (nuevasRespuestas.length > 0) {
+                shuffle(nuevasRespuestas);
+                respuestasAnonimasCache = respuestasAnonimasCache.concat(nuevasRespuestas);
+                pintarRespuestas();
+            }
         }
     });
 
