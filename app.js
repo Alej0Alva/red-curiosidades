@@ -625,7 +625,7 @@ function comprobarSesionExistente() {
 // FASE 1: JUEGO ACTIVO DEL PARTICIPANTE (CELULAR)
 // ==========================================================================
 function iniciarJuegoParticipante() {
-    document.getElementById("jugador-activo-nombre").textContent = usuarioActual.nombre;
+    document.getElementById("jugador-activo-nombre").textContent = nombreUsuarioActual || (usuarioActual ? usuarioActual.nombre : "Jugador");
     
     db.ref(`participantes/${idUsuarioActual}/puntos`).on("value", (snapPuntos) => {
         document.getElementById("jugador-activo-puntos").textContent = `${snapPuntos.val() || 0} pts`;
@@ -815,7 +815,7 @@ function escucharMatchesPropuestosHaciaMi() {
             
             // Obtener el texto de la pregunta que fue respondida
             // Como las preguntas son dinámicas, las sacamos del objeto del usuario actual
-            const textoPreguntaReal = usuarioActual.preguntas?.[intento.pregunta_id]?.texto || "una de tus preguntas";
+            const textoPreguntaReal = usuarioActual?.preguntas?.[intento.pregunta_id]?.texto || "una de tus preguntas";
 
             textoNotificacion.innerHTML = `<strong>${nombreAdivinador}</strong> dice que respondiste <strong>"${intento.respuesta_adivinada}"</strong> a: <em>"${textoPreguntaReal}"</em>. ¿Es correcto?`;
             
@@ -859,7 +859,7 @@ function resolverPropuestaEntrante(adivinadorId, aceptado) {
                 return;
             }
 
-            const miRespuestaReal = usuarioActual.preguntas?.[intento.pregunta_id]?.respuesta;
+            const miRespuestaReal = usuarioActual?.preguntas?.[intento.pregunta_id]?.respuesta;
             const esSabotaje = miRespuestaReal === intento.respuesta_adivinada;
 
             if (esSabotaje) {
@@ -899,7 +899,7 @@ function resolverPropuestaEntrante(adivinadorId, aceptado) {
                 // Notificar al adivinador del sabotaje escribiendo en la propuesta
                 db.ref(`intentos_match/${adivinadorId}`).update({
                     resultado_rechazo: "sabotaje",
-                    saboteador_nombre: usuarioActual.nombre
+                    saboteador_nombre: usuarioActual?.nombre || nombreUsuarioActual || "Compañero"
                 }).then(() => {
                     procesandoConfirmacionLocal = false;
                 }).catch(() => {
