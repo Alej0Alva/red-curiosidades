@@ -1307,130 +1307,131 @@ function inicializarGrafoVisual(esFinal) {
     function actualizarGrafo() {
         const maxPuntos = d3.max(nodosGrafo, d => todosLosParticipantes[d.id]?.puntos || 0);
 
-        // 1. ENLACES (Líneas direccionales con color personalizado del adivinador)
-        let link = gLinks.selectAll(".enlace-linea")
-            .data(enlacesGrafo, d => d.id);
+        if (estructuraCambio) {
+            // 1. ENLACES (Líneas direccionales con color personalizado del adivinador)
+            let link = gLinks.selectAll(".enlace-linea")
+                .data(enlacesGrafo, d => d.id);
 
-        link.exit().remove();
+            link.exit().remove();
 
-        const linkEnter = link.enter().append("line")
-            .attr("class", d => `enlace-linea ${d.correcto ? 'correcto' : ''} animada`)
-            .attr("stroke-width", 2.5)
-            .attr("marker-end", "url(#arrow-match)");
+            const linkEnter = link.enter().append("line")
+                .attr("class", d => `enlace-linea ${d.correcto ? 'correcto' : ''} animada`)
+                .attr("stroke-width", 2.5)
+                .attr("marker-end", "url(#arrow-match)");
 
-        link = linkEnter.merge(link)
-            .attr("stroke", d => {
-                const sourceId = typeof d.source === "object" ? d.source.id : d.source;
-                const sourceNode = nodosGrafo.find(n => n.id === sourceId);
-                return sourceNode ? sourceNode.color : "#10b981";
+            link = linkEnter.merge(link)
+                .attr("stroke", d => {
+                    const sourceId = typeof d.source === "object" ? d.source.id : d.source;
+                    const sourceNode = nodosGrafo.find(n => n.id === sourceId);
+                    return sourceNode ? sourceNode.color : "#10b981";
+                });
+
+            // 2. NODOS
+            let node = gNodes.selectAll(".nodo-grupo")
+                .data(nodosGrafo, d => d.id);
+
+            node.exit().remove();
+
+            const nodeEnter = node.enter().append("g")
+                .attr("class", "nodo-grupo")
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended));
+
+            // Anillo de brillo giratorio dorado para los líderes
+            nodeEnter.append("circle")
+                .attr("class", "nodo-brillo-lider")
+                .attr("r", 25)
+                .attr("fill", "none")
+                .attr("stroke", "#fbbf24")
+                .attr("stroke-width", 0);
+
+            // Círculo principal del nodo usando su propiedad de color guardada
+            nodeEnter.append("circle")
+                .attr("class", "nodo-circulo")
+                .attr("r", 20)
+                .attr("fill", d => d.color);
+
+            // Nombre del jugador
+            nodeEnter.append("text")
+                .attr("class", "nodo-texto")
+                .attr("y", 32)
+                .text(d => d.nombre);
+
+            node = nodeEnter.merge(node);
+
+            // Hover final para mostrar datos
+            if (esFinal) {
+                const tooltip = document.getElementById("revelador-datos");
+                const revNombre = document.getElementById("rev-nombre");
+                const cajaRespuestas = document.getElementById("caja-respuestas-reveladas");
+
+                node.selectAll(".nodo-circulo")
+                    .on("mouseover", (event, d) => {
+                        if (tooltip) tooltip.classList.add("activa");
+                        if (revNombre) revNombre.textContent = d.nombre;
+                        
+                        if (cajaRespuestas) {
+                            cajaRespuestas.innerHTML = "";
+                            const preg = d.preguntas || {};
+                            Object.keys(preg).forEach(key => {
+                                const item = preg[key];
+                                if (item) {
+                                    const div = document.createElement("div");
+                                    div.className = "item-revelado";
+                                    div.innerHTML = `
+                                        <p><strong>P:</strong> ${item.texto}</p>
+                                        <p><strong>R:</strong> <em>"${item.respuesta}"</em></p>
+                                    `;
+                                    cajaRespuestas.appendChild(div);
+                                }
+                            });
+                        }
+                    })
+                    .on("mouseout", () => {
+                        if (tooltip) tooltip.classList.remove("activa");
+                    });
+            }
+
+            simulacion.nodes(nodosGrafo);
+            simulacion.force("link").links(enlacesGrafo);
+            simulacion.alpha(0.3).restart();
+
+            simulacion.on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+
+                node
+                    .attr("transform", d => {
+                        const r = 20;
+                        d.x = Math.max(r, Math.min(width - r, d.x));
+                        d.y = Math.max(r, Math.min(height - r, d.y));
+                        return `translate(${d.x}, ${d.y})`;
+                    });
+
+                // BAMBOLEO DE FLOTACIÓN ORGÁNICA (Vibración suave)
+                nodosGrafo.forEach(d => {
+                    d.vx += (Math.random() - 0.5) * 0.05;
+                    d.vy += (Math.random() - 0.5) * 0.05;
+                });
             });
+        }
 
-        // 2. NODOS
-        let node = gNodes.selectAll(".nodo-grupo")
-            .data(nodosGrafo, d => d.id);
+        // Si la estructura no cambió, actualizamos los halos y textos de forma reactiva
+        const nodeSelection = gNodes.selectAll(".nodo-grupo");
 
-        node.exit().remove();
-
-        const nodeEnter = node.enter().append("g")
-            .attr("class", "nodo-grupo")
-            .call(d3.drag()
-                .on("start", dragstarted)
-                .on("drag", dragged)
-                .on("end", dragended));
-
-        // Anillo de brillo giratorio dorado para los líderes
-        nodeEnter.append("circle")
-            .attr("class", "nodo-brillo-lider")
-            .attr("r", 25)
-            .attr("fill", "none")
-            .attr("stroke", "#fbbf24")
-            .attr("stroke-width", 0);
-
-        // Círculo principal del nodo usando su propiedad de color guardada
-        nodeEnter.append("circle")
-            .attr("class", "nodo-circulo")
-            .attr("r", 20)
-            .attr("fill", d => d.color);
-
-        // Nombre del jugador
-        nodeEnter.append("text")
-            .attr("class", "nodo-texto")
-            .attr("y", 32)
-            .text(d => d.nombre);
-
-        node = nodeEnter.merge(node);
-
-        // Actualizar visualización del halo dorado del líder
-        node.select(".nodo-brillo-lider")
+        nodeSelection.select(".nodo-brillo-lider")
             .attr("stroke-width", d => {
                 const puntosNode = todosLosParticipantes[d.id]?.puntos || 0;
                 return (maxPuntos > 0 && puntosNode === maxPuntos) ? 2.5 : 0;
             });
 
-        // Actualizar texto en caso de que cambie
-        node.select(".nodo-texto")
+        nodeSelection.select(".nodo-texto")
             .text(d => d.nombre);
-
-        // Hover final para mostrar datos
-        if (esFinal) {
-            const tooltip = document.getElementById("revelador-datos");
-            const revNombre = document.getElementById("rev-nombre");
-            const cajaRespuestas = document.getElementById("caja-respuestas-reveladas");
-
-            node.selectAll(".nodo-circulo")
-                .on("mouseover", (event, d) => {
-                    if (tooltip) tooltip.classList.add("activa");
-                    if (revNombre) revNombre.textContent = d.nombre;
-                    
-                    if (cajaRespuestas) {
-                        cajaRespuestas.innerHTML = "";
-                        const preg = d.preguntas || {};
-                        Object.keys(preg).forEach(key => {
-                            const item = preg[key];
-                            if (item) {
-                                const div = document.createElement("div");
-                                div.className = "item-revelado";
-                                div.innerHTML = `
-                                    <p><strong>P:</strong> ${item.texto}</p>
-                                    <p><strong>R:</strong> <em>"${item.respuesta}"</em></p>
-                                `;
-                                cajaRespuestas.appendChild(div);
-                            }
-                        });
-                    }
-                })
-                .on("mouseout", () => {
-                    if (tooltip) tooltip.classList.remove("activa");
-                });
-        }
-
-        if (estructuraCambio) {
-            simulacion.nodes(nodosGrafo);
-            simulacion.force("link").links(enlacesGrafo);
-            simulacion.alpha(0.3).restart();
-        }
-
-        simulacion.on("tick", () => {
-            link
-                .attr("x1", d => d.source.x)
-                .attr("y1", d => d.source.y)
-                .attr("x2", d => d.target.x)
-                .attr("y2", d => d.target.y);
-
-            node
-                .attr("transform", d => {
-                    const r = 20;
-                    d.x = Math.max(r, Math.min(width - r, d.x));
-                    d.y = Math.max(r, Math.min(height - r, d.y));
-                    return `translate(${d.x}, ${d.y})`;
-                });
-
-            // BAMBOLEO DE FLOTACIÓN ORGÁNICA (Vibración suave)
-            nodosGrafo.forEach(d => {
-                d.vx += (Math.random() - 0.5) * 0.05;
-                d.vy += (Math.random() - 0.5) * 0.05;
-            });
-        });
     }
 
     // Funciones drag & drop
