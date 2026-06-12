@@ -130,6 +130,17 @@ function inicializarRutaYVistas() {
 // FLUJO: PANTALLA GRANDE / MODERADOR
 // ==========================================
 function inicializarPantallaGrande() {
+    // Generar código QR dinámicamente usando la URL de los participantes (sin query string)
+    const urlParticipantes = window.location.origin + window.location.pathname;
+    const contQr = document.getElementById("contenedor-qr-lobby");
+    if (contQr) {
+        contQr.innerHTML = "";
+        const imgQr = document.createElement("img");
+        imgQr.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(urlParticipantes)}`;
+        imgQr.alt = "Código QR para jugar";
+        contQr.appendChild(imgQr);
+    }
+
     // Escuchar participantes registrados
     db.ref("participantes").on("value", (snapshot) => {
         todosLosParticipantes = snapshot.val() || {};
@@ -398,16 +409,7 @@ function inicializarParticipante() {
         const estado = snapshot.val();
         if (estado && estado.iniciado) {
             if (estado.finalizado) {
-                seccionRegistro.classList.add("oculta");
-                seccionEspera.classList.add("oculta");
-                seccionJuego.classList.add("oculta");
-                seccionFin.classList.remove("oculta");
-                
-                if (idUsuarioActual) {
-                    db.ref(`participantes/${idUsuarioActual}/puntos`).once("value", (snapPuntos) => {
-                        document.getElementById("puntos-finales").textContent = snapPuntos.val() || 0;
-                    });
-                }
+                mostrarPantallaCierreParticipante();
             } else {
                 if (idUsuarioActual) {
                     seccionRegistro.classList.add("oculta");
@@ -464,6 +466,48 @@ function irAPantallaEspera(nombre) {
     seccionJuego.classList.add("oculta");
 }
 
+// Helper para rellenar y mostrar la pantalla de cierre móvil (Ganador Especial vs Normal)
+function mostrarPantallaCierreParticipante() {
+    seccionRegistro.classList.add("oculta");
+    seccionEspera.classList.add("oculta");
+    seccionJuego.classList.add("oculta");
+    seccionFin.classList.remove("oculta");
+    
+    if (idUsuarioActual) {
+        db.ref("participantes").once("value", (snapPart) => {
+            const todos = snapPart.val() || {};
+            const puntosUsuario = todos[idUsuarioActual]?.puntos || 0;
+            
+            // Encontrar la puntuación máxima
+            let maxPts = -999;
+            Object.keys(todos).forEach(id => {
+                const pts = todos[id].puntos || 0;
+                if (pts > maxPts) {
+                    maxPts = pts;
+                }
+            });
+            
+            // Determinar si soy el ganador (o empato en el primer lugar)
+            const esGanador = puntosUsuario === maxPts && maxPts > 0;
+            
+            const elGanadorDiv = document.getElementById("vista-fin-ganador");
+            const elNormalDiv = document.getElementById("vista-fin-normal");
+            
+            if (esGanador) {
+                if (elGanadorDiv) elGanadorDiv.classList.remove("oculta");
+                if (elNormalDiv) elNormalDiv.classList.add("oculta");
+                const elPuntosGanador = document.getElementById("puntos-finales-ganador");
+                if (elPuntosGanador) elPuntosGanador.textContent = puntosUsuario;
+            } else {
+                if (elGanadorDiv) elGanadorDiv.classList.add("oculta");
+                if (elNormalDiv) elNormalDiv.classList.remove("oculta");
+                const elPuntosNormal = document.getElementById("puntos-finales");
+                if (elPuntosNormal) elPuntosNormal.textContent = puntosUsuario;
+            }
+        });
+    }
+}
+
 function comprobarSesionExistente() {
     const idGuardado = localStorage.getItem("red_curiosidades_id");
     if (idGuardado) {
@@ -479,10 +523,7 @@ function comprobarSesionExistente() {
                     const est = snapEstado.val();
                     if (est && est.iniciado) {
                         if (est.finalizado) {
-                            seccionRegistro.classList.add("oculta");
-                            seccionEspera.classList.add("oculta");
-                            seccionJuego.classList.add("oculta");
-                            seccionFin.classList.remove("oculta");
+                            mostrarPantallaCierreParticipante();
                         } else {
                             seccionRegistro.classList.add("oculta");
                             seccionEspera.classList.add("oculta");

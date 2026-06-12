@@ -92,10 +92,23 @@
 
         <!-- Fase 2: Fin del Juego -->
         <div id="seccion-fin" class="tarjeta-pantalla oculta">
-            <h2>El juego ha terminado</h2>
-            <p>Mira la pantalla grande para ver el podio final y las respuestas reveladas de todos.</p>
-            <div class="resumen-puntos">
-                Tu puntuación final: <strong id="puntos-finales">0</strong>
+            <!-- Vista de Ganador Especial -->
+            <div id="vista-fin-ganador" class="oculta">
+                <div class="emoji-corona">👑</div>
+                <h2 class="titulo-ganador">🏆 ¡ERES EL REY/REINA DE LA INTEGRACIÓN! 🏆</h2>
+                <p class="mensaje-ganador">Eres quien más conoce a todos en la <strong>UACE</strong>. ¡Felicidades por tu gran empatía y memoria! 🎉</p>
+                <div class="resumen-puntos oro">
+                    Puntuación Máxima: <strong id="puntos-finales-ganador">0</strong>
+                </div>
+            </div>
+            
+            <!-- Vista normal -->
+            <div id="vista-fin-normal">
+                <h2>El juego ha terminado</h2>
+                <p>Mira la pantalla grande para ver el podio final y las respuestas reveladas de todos.</p>
+                <div class="resumen-puntos">
+                    Tu puntuación final: <strong id="puntos-finales">0</strong>
+                </div>
             </div>
         </div>
 
@@ -133,7 +146,10 @@
                     <p><strong>3. Puntuación:</strong> Matches correctos otorgan <strong>+2 puntos</strong>. Matches incorrectos restan <strong>-1 punto</strong>.</p>
                 </div>
                 <div class="instruccion-qr">
-                    <p class="texto-destacado">Escanea el código QR de la sala para jugar</p>
+                    <p class="texto-destacado">Escanea el código QR para jugar</p>
+                    <div id="contenedor-qr-lobby" class="contenedor-qr">
+                        <!-- Imagen del QR se generará dinámicamente -->
+                    </div>
                 </div>
             </div>
 
@@ -142,8 +158,9 @@
                 <ul id="lista-participantes-registrados">
                     <!-- Se llena con JS -->
                 </ul>
-                <button id="btn-iniciar-juego" class="boton-iniciar">Iniciar Actividad (22 Minutos)</button>
+                <button id="btn-iniciar-juego" class="boton-iniciar">Iniciar Actividad</button>
                 <button id="btn-reiniciar-todo-mod" class="boton-peligro-discreto" style="margin-top: 10px; width: 100%;">Reiniciar Base de Datos</button>
+
             </div>
         </div>
 
