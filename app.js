@@ -854,37 +854,50 @@ function resolverPropuestaEntrante(adivinadorId, aceptado) {
                     db.ref(`participantes/${idUsuarioActual}/puntos`).set(pts - 1);
                 });
 
-                // RECOMPENSAR AL ADIVINADOR con +2 puntos porque era un match correcto!
-                db.ref(`participantes/${adivinadorId}/puntos`).once("value", (snapPuntosA) => {
-                    let ptsA = snapPuntosA.val() || 0;
-                    db.ref(`participantes/${adivinadorId}/puntos`).set(ptsA + 2);
-                });
-
-                // Registrar el match como confirmado en Firebase (es correcto!)
+                // Registrar acierto atómico y calcular recompensa decreciente por velocidad
                 const idRespuestaUnica = `${idUsuarioActual}_${intento.pregunta_id}`;
-                db.ref(`participantes/${adivinadorId}/aciertos/${idRespuestaUnica}`).set(true);
+                db.ref(`conteo_aciertos/${idRespuestaUnica}`).transaction((currentValue) => {
+                    return (currentValue || 0) + 1;
+                }, (error, committed, snapshot) => {
+                    let puntosGanados = 1;
+                    if (committed) {
+                        const numeroAcierto = snapshot.val() || 1;
+                        if (numeroAcierto === 1) puntosGanados = 3;
+                        else if (numeroAcierto === 2) puntosGanados = 2;
+                    }
 
-                const nuevoMatchRef = db.ref("matches_confirmados").push();
-                nuevoMatchRef.set({
-                    adivinador_id: adivinadorId,
-                    objetivo_id: idUsuarioActual,
-                    pregunta_id: intento.pregunta_id,
-                    es_correcto: true,
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                });
+                    // RECOMPENSAR AL ADIVINADOR con puntos calculados por velocidad
+                    db.ref(`participantes/${adivinadorId}/puntos`).once("value", (snapPuntosA) => {
+                        let ptsA = snapPuntosA.val() || 0;
+                        db.ref(`participantes/${adivinadorId}/puntos`).set(ptsA + puntosGanados);
+                    });
 
-                reproducirSonidoSabotaje();
-                mostrarAlertaCustomizada(
-                    "🚨 ¡SABOTEADOR ATRAPADO!",
-                    "Intentaste rechazar un match que <strong>SÍ era tuyo</strong>.<br>Se te ha restado <strong>1 punto</strong> por juego sucio y tu compañero recibió sus +2 puntos correspondientes. ¡Juega limpio! 🤫",
-                    "sabotaje",
-                    "🚨"
-                );
+                    // Registrar el match como confirmado en Firebase (es correcto!)
+                    db.ref(`participantes/${adivinadorId}/aciertos/${idRespuestaUnica}`).set(true);
 
-                // Notificar al adivinador del sabotaje escribiendo en la propuesta
-                db.ref(`intentos_match/${adivinadorId}`).update({
-                    resultado_rechazo: "sabotaje",
-                    saboteador_nombre: usuarioActual.nombre
+                    const nuevoMatchRef = db.ref("matches_confirmados").push();
+                    nuevoMatchRef.set({
+                        adivinador_id: adivinadorId,
+                        objetivo_id: idUsuarioActual,
+                        pregunta_id: intento.pregunta_id,
+                        es_correcto: true,
+                        timestamp: firebase.database.ServerValue.TIMESTAMP
+                    });
+
+                    reproducirSonidoSabotaje();
+                    mostrarAlertaCustomizada(
+                        "🚨 ¡SABOTEADOR ATRAPADO!",
+                        "Intentaste rechazar un match que <strong>SÍ era tuyo</strong>.<br>Se te ha restado <strong>1 punto</strong> por juego sucio y tu compañero recibió sus puntos correspondientes. ¡Juega limpio! 🤫",
+                        "sabotaje",
+                        "🚨"
+                    );
+
+                    // Notificar al adivinador del sabotaje escribiendo en la propuesta
+                    db.ref(`intentos_match/${adivinadorId}`).update({
+                        resultado_rechazo: "sabotaje",
+                        saboteador_nombre: usuarioActual.nombre,
+                        puntos_ganados: puntosGanados
+                    });
                 });
             } else {
                 // Rechazo honesto: penalizar al adivinador con -1 punto por suposición errónea
@@ -934,10 +947,13 @@ function escucharResolucionDeMiPropuesta() {
             modalMatch.classList.add("oculta");
             propuestaEnviadaLocalmente = false;
 
+            const ptsGanados = propuesta.puntos_ganados || 2;
+            const sufijoPuntos = ptsGanados === 1 ? "punto" : "puntos";
+
             reproducirSonidoSabotajeAdivinador();
             mostrarAlertaCustomizada(
                 "🕵️ ¡ATRAPADO EN LA MENTIRA!",
-                `Tu compañero <strong>${propuesta.saboteador_nombre}</strong> intentó rechazar tu match correcto, pero nuestro sistema lo detectó.<br>¡Sumas tus <strong>+2 puntos</strong> correspondientes!<br>Tu compañero ha sido penalizado con -1 punto. 🏆`,
+                `Tu compañero <strong>${propuesta.saboteador_nombre}</strong> intentó rechazar tu match correcto, pero nuestro sistema lo detectó.<br>¡Sumas tus <strong>+${ptsGanados} ${sufijoPuntos}</strong> correspondientes!<br>Tu compañero ha sido penalizado con -1 punto. 🏆`,
                 "exito",
                 "🕵️"
             );
@@ -963,11 +979,37 @@ function escucharResolucionDeMiPropuesta() {
 function procesarResultadoMatch(objetivoId, preguntaId, esCorrecto) {
     const idRespuestaUnica = `${objetivoId}_${preguntaId}`;
 
-    db.ref(`participantes/${idUsuarioActual}/puntos`).once("value", (snapPuntos) => {
-        let puntosActuales = snapPuntos.val() || 0;
-        
-        if (esCorrecto) {
-            puntosActuales += 2;
+    if (esCorrecto) {
+        db.ref(`conteo_aciertos/${idRespuestaUnica}`).transaction((currentValue) => {
+            return (currentValue || 0) + 1;
+        }, (error, committed, snapshot) => {
+            let puntosGanados = 1;
+            let medalla = "";
+            let puestoTexto = "Adivinaste la respuesta de tu compañero.";
+            
+            if (committed) {
+                const numeroAcierto = snapshot.val() || 1;
+                if (numeroAcierto === 1) {
+                    puntosGanados = 3;
+                    medalla = "🥇 ";
+                    puestoTexto = "¡Fuiste el **primero** en adivinar esta respuesta!";
+                } else if (numeroAcierto === 2) {
+                    puntosGanados = 2;
+                    medalla = "🥈 ";
+                    puestoTexto = "¡Fuiste el **segundo** en adivinar esta respuesta!";
+                } else {
+                    puntosGanados = 1;
+                    medalla = "🥉 ";
+                    puestoTexto = `Fuiste el **puesto #${numeroAcierto}** en adivinar esta respuesta.`;
+                }
+            }
+
+            db.ref(`participantes/${idUsuarioActual}/puntos`).once("value", (snapPuntos) => {
+                let puntosActuales = snapPuntos.val() || 0;
+                puntosActuales += puntosGanados;
+                db.ref(`participantes/${idUsuarioActual}/puntos`).set(puntosActuales);
+            });
+
             reproducirSonidoAcierto();
             
             db.ref(`participantes/${idUsuarioActual}/aciertos/${idRespuestaUnica}`).set(true);
@@ -982,24 +1024,37 @@ function procesarResultadoMatch(objetivoId, preguntaId, esCorrecto) {
                 timestamp: firebase.database.ServerValue.TIMESTAMP
             });
 
+            const sufijoPuntos = puntosGanados === 1 ? "punto" : "puntos";
             mostrarAlertaCustomizada(
                 "🎉 ¡MATCH CORRECTO!",
-                `¡Excelente! Adivinaste correctamente la respuesta de tu compañero.<br>Sumas <strong>+2 puntos</strong>. 🏆`,
+                `${medalla}${puestoTexto}<br>Sumas <strong>+${puntosGanados} ${sufijoPuntos}</strong>. 🏆`,
                 "exito",
                 "🎉"
             );
-        } else {
-            puntosActuales -= 1;
-            reproducirSonidoFallo();
-            mostrarAlertaCustomizada(
-                "❌ MATCH INCORRECTO",
-                `La respuesta seleccionada no correspondía a este compañero.<br>Restas <strong>-1 punto</strong>. ¡Vuelve a intentarlo! 🧐`,
-                "advertencia",
-                "❌"
-            );
-        }
 
-        db.ref(`participantes/${idUsuarioActual}/puntos`).set(puntosActuales);
+            // Apagamos el flag local para que al removerse la propuesta no tire la alerta de rechazo
+            propuestaEnviadaLocalmente = false;
+            db.ref(`intentos_match/${idUsuarioActual}`).remove().then(() => {
+                btnEnviarPropuesta.disabled = false;
+                btnEnviarPropuesta.textContent = "Proponer Match";
+                modalMatch.classList.add("oculta");
+                respuestaSeleccionada = null;
+            });
+        });
+    } else {
+        db.ref(`participantes/${idUsuarioActual}/puntos`).once("value", (snapPuntos) => {
+            let puntosActuales = snapPuntos.val() || 0;
+            puntosActuales -= 1;
+            db.ref(`participantes/${idUsuarioActual}/puntos`).set(puntosActuales);
+        });
+
+        reproducirSonidoFallo();
+        mostrarAlertaCustomizada(
+            "❌ MATCH INCORRECTO",
+            `La respuesta seleccionada no correspondía a este compañero.<br>Restas <strong>-1 punto</strong>. ¡Vuelve a intentarlo! 🧐`,
+            "advertencia",
+            "❌"
+        );
 
         // Apagamos el flag local para que al removerse la propuesta no tire la alerta de rechazo
         propuestaEnviadaLocalmente = false;
@@ -1009,7 +1064,7 @@ function procesarResultadoMatch(objetivoId, preguntaId, esCorrecto) {
             modalMatch.classList.add("oculta");
             respuestaSeleccionada = null;
         });
-    });
+    }
 }
 
 // ==========================================================================
