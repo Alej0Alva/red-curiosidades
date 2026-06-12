@@ -88,7 +88,7 @@ const btnRechazarMatch = document.getElementById("btn-rechazar-match");
 // Modal del Celular
 const modalMatch = document.getElementById("modal-match");
 const modalDatoTexto = document.getElementById("modal-dato-texto");
-const selectorParticipantes = document.getElementById("selector-participantes");
+const selectorParticipantesContainer = document.getElementById("selector-participantes-container");
 const btnEnviarPropuesta = document.getElementById("btn-enviar-propuesta");
 const btnCerrarModal = document.getElementById("btn-cerrar-modal");
 
@@ -110,13 +110,16 @@ const elLeaderboardFinal = document.getElementById("leaderboard-final");
 // 4. VARIABLES DE ESTADO LOCAL
 let esVistaPantallaGrande = false;
 let usuarioActual = null;
-let idUsuarioActual = null;
+let idUsuarioActual = localStorage.getItem("red_curiosidades_id") || null;
+let nombreUsuarioActual = localStorage.getItem("red_curiosidades_nombre") || "";
 
 let todosLosParticipantes = {};
 let respuestaSeleccionada = null;
 let intervaloCronometro = null;
 let preguntasAsignadas = []; // Guardará las 3 preguntas elegidas al azar para el registro
 let propuestaEnviadaLocalmente = false;
+let compañeroSeleccionadoId = null;
+let respuestasAnonimasCache = null;
 
 // ==========================================
 // DETECCIÓN DE RUTA Y FLUJO PRINCIPAL
@@ -364,8 +367,20 @@ function actualizarLeaderboardVisual(esFinal = false) {
 // FLUJO: PARTICIPANTE (CELULAR)
 // ==========================================
 function inicializarParticipante() {
-    // 1. Generar preguntas aleatorias del banco para el formulario
-    generarPreguntasRegistroDinamicas();
+    // Si ya existe sesión local, ocultamos el registro de inmediato para evitar el parpadeo visual
+    if (idUsuarioActual) {
+        seccionRegistro.classList.add("oculta");
+        seccionEspera.classList.remove("oculta");
+        nombreEspera.textContent = nombreUsuarioActual || "Cargando...";
+    } else {
+        seccionRegistro.classList.remove("oculta");
+        seccionEspera.classList.add("oculta");
+    }
+
+    // 1. Generar preguntas aleatorias del banco para el formulario (solo si no hay sesión iniciada)
+    if (!idUsuarioActual) {
+        generarPreguntasRegistroDinamicas();
+    }
 
     // 2. Manejar registro
     formularioRegistro.addEventListener("submit", (e) => {
@@ -393,7 +408,9 @@ function inicializarParticipante() {
         nuevoParticipanteRef.set(datosParticipante)
             .then(() => {
                 localStorage.setItem("red_curiosidades_id", nuevoId);
+                localStorage.setItem("red_curiosidades_nombre", nombreVal);
                 idUsuarioActual = nuevoId;
+                nombreUsuarioActual = nombreVal;
                 usuarioActual = datosParticipante;
                 irAPantallaEspera(nombreVal);
             })
@@ -422,8 +439,10 @@ function inicializarParticipante() {
                 }
             }
         } else {
+            // El juego no ha iniciado o se ha reiniciado
+            respuestasAnonimasCache = null;
             if (idUsuarioActual) {
-                irAPantallaEspera(usuarioActual.nombre);
+                irAPantallaEspera(nombreUsuarioActual || (usuarioActual ? usuarioActual.nombre : "Participante"));
             } else {
                 seccionRegistro.classList.remove("oculta");
                 seccionEspera.classList.add("oculta");
@@ -583,8 +602,11 @@ function comprobarSesionExistente() {
             } else {
                 // Si el participante ya no existe (porque se reinició la BD), limpiamos sesión
                 localStorage.removeItem("red_curiosidades_id");
+                localStorage.removeItem("red_curiosidades_nombre");
                 idUsuarioActual = null;
+                nombreUsuarioActual = "";
                 usuarioActual = null;
+                respuestasAnonimasCache = null;
                 
                 // Redirigir a registro y generar nuevas preguntas curiosas
                 seccionRegistro.classList.remove("oculta");
@@ -612,74 +634,81 @@ function iniciarJuegoParticipante() {
     escucharResolucionDeMiPropuesta();
 }
 
+function inicializarRespuestasCache(participantes) {
+    let respuestasAnonimas = [];
+
+    Object.keys(participantes).forEach(partId => {
+        if (partId === idUsuarioActual) return;
+
+        const part = participantes[partId];
+        const preg = part.preguntas || {};
+
+        // Cargar dinámicamente las preguntas asignadas a este participante
+        Object.keys(preg).forEach((pClave) => {
+            const itemPreg = preg[pClave];
+            if (itemPreg && itemPreg.respuesta) {
+                const idRespuestaUnica = `${partId}_${pClave}`;
+                respuestasAnonimas.push({
+                    id: idRespuestaUnica,
+                    propietarioId: partId,
+                    preguntaId: pClave,
+                    preguntaTexto: itemPreg.texto,
+                    texto: itemPreg.respuesta,
+                    yaAdivinada: false
+                });
+            }
+        });
+    });
+
+    shuffle(respuestasAnonimas);
+    respuestasAnonimasCache = respuestasAnonimas;
+}
+
+function pintarRespuestas() {
+    if (!respuestasAnonimasCache) return;
+
+    listaRespuestas.innerHTML = "";
+    respuestasAnonimasCache.forEach(item => {
+        const div = document.createElement("div");
+        div.className = `tarjeta-respuesta ${item.yaAdivinada ? 'ya-adivinada' : ''}`;
+        
+        div.innerHTML = `
+            <span class="tag-pregunta">${item.preguntaTexto}</span>
+            <p class="texto-respuesta">"${item.texto}"</p>
+        `;
+
+        if (!item.yaAdivinada) {
+            div.addEventListener("click", () => {
+                abrirModalMatch(item);
+            });
+        }
+
+        listaRespuestas.appendChild(div);
+    });
+}
+
 function cargarRespuestasAnonimasYCompañeros() {
+    // Escuchamos participantes para censo y para iniciar el caché
     db.ref("participantes").on("value", (snapshot) => {
         const participantes = snapshot.val() || {};
         todosLosParticipantes = participantes;
 
-        // Llenar selector de compañeros (excluyendo a uno mismo)
-        selectorParticipantes.innerHTML = '<option value="">-- Elige a un compañero --</option>';
-        Object.keys(participantes).forEach(id => {
-            if (id !== idUsuarioActual) {
-                const opt = document.createElement("option");
-                opt.value = id;
-                opt.textContent = participantes[id].nombre;
-                selectorParticipantes.appendChild(opt);
-            }
-        });
+        // Si aún no hemos inicializado el caché de respuestas, lo hacemos ahora
+        if (!respuestasAnonimasCache && Object.keys(participantes).length > 0) {
+            inicializarRespuestasCache(participantes);
+            pintarRespuestas();
+        }
+    });
 
-        // Traer aciertos
-        db.ref(`participantes/${idUsuarioActual}/aciertos`).once("value", (snapAciertos) => {
-            const aciertos = snapAciertos.val() || {};
-            let respuestasAnonimas = [];
-
-            Object.keys(participantes).forEach(partId => {
-                if (partId === idUsuarioActual) return;
-
-                const part = participantes[partId];
-                const preg = part.preguntas || {};
-
-                // Cargar dinámicamente las preguntas asignadas a este participante
-                Object.keys(preg).forEach((pClave) => {
-                    const itemPreg = preg[pClave];
-                    if (itemPreg && itemPreg.respuesta) {
-                        const idRespuestaUnica = `${partId}_${pClave}`;
-                        const yaAdivinada = aciertos[idRespuestaUnica] === true;
-
-                        respuestasAnonimas.push({
-                            id: idRespuestaUnica,
-                            propietarioId: partId,
-                            preguntaId: pClave,
-                            preguntaTexto: itemPreg.texto,
-                            texto: itemPreg.respuesta,
-                            yaAdivinada: yaAdivinada
-                        });
-                    }
-                });
+    // Escuchamos nuestros aciertos en tiempo real para sombrear sin rebarajar
+    db.ref(`participantes/${idUsuarioActual}/aciertos`).on("value", (snapAciertos) => {
+        const aciertos = snapAciertos.val() || {};
+        if (respuestasAnonimasCache) {
+            respuestasAnonimasCache.forEach(item => {
+                item.yaAdivinada = aciertos[item.id] === true;
             });
-
-            shuffle(respuestasAnonimas);
-
-            // Pintar respuestas barajadas
-            listaRespuestas.innerHTML = "";
-            respuestasAnonimas.forEach(item => {
-                const div = document.createElement("div");
-                div.className = `tarjeta-respuesta ${item.yaAdivinada ? 'ya-adivinada' : ''}`;
-                
-                div.innerHTML = `
-                    <span class="tag-pregunta">${item.preguntaTexto}</span>
-                    <p class="texto-respuesta">"${item.texto}"</p>
-                `;
-
-                if (!item.yaAdivinada) {
-                    div.addEventListener("click", () => {
-                        abrirModalMatch(item);
-                    });
-                }
-
-                listaRespuestas.appendChild(div);
-            });
-        });
+            pintarRespuestas();
+        }
     });
 }
 
@@ -694,7 +723,33 @@ function shuffle(array) {
 function abrirModalMatch(itemRespuesta) {
     respuestaSeleccionada = itemRespuesta;
     modalDatoTexto.textContent = `"${itemRespuesta.texto}"`;
-    selectorParticipantes.value = "";
+    
+    // Resetear compañero seleccionado
+    compañeroSeleccionadoId = null;
+    
+    // Rellenar la cuadrícula de compañeros como botones táctiles
+    selectorParticipantesContainer.innerHTML = "";
+    Object.keys(todosLosParticipantes).forEach(id => {
+        if (id !== idUsuarioActual) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "btn-participante-opcion";
+            btn.textContent = todosLosParticipantes[id].nombre;
+            
+            btn.addEventListener("click", () => {
+                // Deseleccionar anteriores
+                const todosBtns = selectorParticipantesContainer.querySelectorAll(".btn-participante-opcion");
+                todosBtns.forEach(b => b.classList.remove("seleccionado"));
+                
+                // Seleccionar actual
+                btn.classList.add("seleccionado");
+                compañeroSeleccionadoId = id;
+            });
+            
+            selectorParticipantesContainer.appendChild(btn);
+        }
+    });
+    
     modalMatch.classList.remove("oculta");
 }
 
@@ -705,7 +760,7 @@ btnCerrarModal.addEventListener("click", () => {
 
 // Enviar propuesta
 btnEnviarPropuesta.addEventListener("click", () => {
-    const objetivoId = selectorParticipantes.value;
+    const objetivoId = compañeroSeleccionadoId;
     if (!objetivoId) {
         mostrarAlertaCustomizada("Selección Requerida", "Por favor, selecciona a un compañero de la lista antes de proponer el match.", "advertencia", "⚠️");
         return;
@@ -1186,33 +1241,67 @@ function inicializarGrafoVisual(esFinal) {
 
     let nodosGrafo = [];
     let enlacesGrafo = [];
+    let rawParticipantes = {};
+    let rawMatches = {};
 
-    const refParticipantes = db.ref("participantes");
-    const refMatches = db.ref("matches_confirmados");
+    let prevNodosKeys = "";
+    let prevEnlacesKeys = "";
+    let nodosMap = new Map();
+    let estructuraCambio = false;
 
-    refParticipantes.on("value", (snapPart) => {
-        const participantes = snapPart.val() || {};
-        
-        // Mapear participantes asignándole un color de la paleta Tableau10 a cada uno en base a su índice
-        nodosGrafo = Object.keys(participantes).map((id, i) => ({
+    function procesarYActualizarGrafo() {
+        // Reusar objetos de nodo para conservar x, y, vx, vy
+        nodosGrafo = Object.keys(rawParticipantes).map((id, i) => {
+            let node = nodosMap.get(id);
+            if (!node) {
+                node = {
+                    id: id,
+                    nombre: rawParticipantes[id].nombre,
+                    preguntas: rawParticipantes[id].preguntas || {},
+                    color: d3.schemeTableau10[i % 10]
+                };
+                nodosMap.set(id, node);
+            } else {
+                node.nombre = rawParticipantes[id].nombre;
+                node.preguntas = rawParticipantes[id].preguntas || {};
+            }
+            return node;
+        });
+
+        // Limpiar nodos eliminados
+        for (let id of nodosMap.keys()) {
+            if (!rawParticipantes[id]) {
+                nodosMap.delete(id);
+            }
+        }
+
+        enlacesGrafo = Object.keys(rawMatches).map(id => ({
             id: id,
-            nombre: participantes[id].nombre,
-            preguntas: participantes[id].preguntas || {},
-            color: d3.schemeTableau10[i % 10] // Guardar color en el nodo
+            source: rawMatches[id].adivinador_id,
+            target: rawMatches[id].objetivo_id,
+            correcto: rawMatches[id].es_correcto
         }));
 
-        refMatches.on("value", (snapMatches) => {
-            const matches = snapMatches.val() || {};
-            
-            enlacesGrafo = Object.keys(matches).map(id => ({
-                id: id,
-                source: matches[id].adivinador_id,
-                target: matches[id].objetivo_id,
-                correcto: matches[id].es_correcto
-            }));
+        // Comprobar si cambió la estructura
+        const currentNodosKeys = Object.keys(rawParticipantes).sort().join(",");
+        const currentEnlacesKeys = Object.keys(rawMatches).sort().join(",");
 
-            actualizarGrafo();
-        });
+        estructuraCambio = (currentNodosKeys !== prevNodosKeys) || (currentEnlacesKeys !== prevEnlacesKeys);
+
+        prevNodosKeys = currentNodosKeys;
+        prevEnlacesKeys = currentEnlacesKeys;
+
+        actualizarGrafo();
+    }
+
+    db.ref("participantes").on("value", (snapPart) => {
+        rawParticipantes = snapPart.val() || {};
+        procesarYActualizarGrafo();
+    });
+
+    db.ref("matches_confirmados").on("value", (snapMatches) => {
+        rawMatches = snapMatches.val() || {};
+        procesarYActualizarGrafo();
     });
 
     function actualizarGrafo() {
@@ -1231,10 +1320,8 @@ function inicializarGrafoVisual(esFinal) {
 
         link = linkEnter.merge(link)
             .attr("stroke", d => {
-                // Obtener ID del adivinador (origen de la conexión)
                 const sourceId = typeof d.source === "object" ? d.source.id : d.source;
                 const sourceNode = nodosGrafo.find(n => n.id === sourceId);
-                // Si encontramos el nodo del adivinador, la línea de conexión usará su color
                 return sourceNode ? sourceNode.color : "#10b981";
             });
 
@@ -1280,6 +1367,10 @@ function inicializarGrafoVisual(esFinal) {
                 return (maxPuntos > 0 && puntosNode === maxPuntos) ? 2.5 : 0;
             });
 
+        // Actualizar texto en caso de que cambie
+        node.select(".nodo-texto")
+            .text(d => d.nombre);
+
         // Hover final para mostrar datos
         if (esFinal) {
             const tooltip = document.getElementById("revelador-datos");
@@ -1288,32 +1379,36 @@ function inicializarGrafoVisual(esFinal) {
 
             node.selectAll(".nodo-circulo")
                 .on("mouseover", (event, d) => {
-                    tooltip.classList.add("activa");
-                    revNombre.textContent = d.nombre;
+                    if (tooltip) tooltip.classList.add("activa");
+                    if (revNombre) revNombre.textContent = d.nombre;
                     
-                    cajaRespuestas.innerHTML = "";
-                    const preg = d.preguntas || {};
-                    Object.keys(preg).forEach(key => {
-                        const item = preg[key];
-                        if (item) {
-                            const div = document.createElement("div");
-                            div.className = "item-revelado";
-                            div.innerHTML = `
-                                <p><strong>P:</strong> ${item.texto}</p>
-                                <p><strong>R:</strong> <em>"${item.respuesta}"</em></p>
-                            `;
-                            cajaRespuestas.appendChild(div);
-                        }
-                    });
+                    if (cajaRespuestas) {
+                        cajaRespuestas.innerHTML = "";
+                        const preg = d.preguntas || {};
+                        Object.keys(preg).forEach(key => {
+                            const item = preg[key];
+                            if (item) {
+                                const div = document.createElement("div");
+                                div.className = "item-revelado";
+                                div.innerHTML = `
+                                    <p><strong>P:</strong> ${item.texto}</p>
+                                    <p><strong>R:</strong> <em>"${item.respuesta}"</em></p>
+                                `;
+                                cajaRespuestas.appendChild(div);
+                            }
+                        });
+                    }
                 })
                 .on("mouseout", () => {
-                    tooltip.classList.remove("activa");
+                    if (tooltip) tooltip.classList.remove("activa");
                 });
         }
 
-        simulacion.nodes(nodosGrafo);
-        simulacion.force("link").links(enlacesGrafo);
-        simulacion.alpha(1).restart();
+        if (estructuraCambio) {
+            simulacion.nodes(nodosGrafo);
+            simulacion.force("link").links(enlacesGrafo);
+            simulacion.alpha(0.3).restart();
+        }
 
         simulacion.on("tick", () => {
             link

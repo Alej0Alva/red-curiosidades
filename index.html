@@ -36,9 +36,17 @@
 
         <!-- Fase 0: Espera de Inicio -->
         <div id="seccion-espera" class="tarjeta-pantalla oculta">
-            <div class="animacion-carga"></div>
-            <h2>¡Te has registrado!</h2>
-            <p>Hola <span id="nombre-espera"></span>, prepárate. El moderador iniciará el juego pronto en la pantalla grande...</p>
+            <div class="animacion-carga" style="margin-bottom: 15px;"></div>
+            <h2>¡Registro Exitoso!</h2>
+            <p style="margin-bottom: 20px;">Hola <span id="nombre-espera" style="font-weight: bold; color: var(--color-primario);"></span>. El juego iniciará pronto. Lee las instrucciones mientras esperas:</p>
+            
+            <div class="tarjeta-reglas-espera" style="text-align: left; background-color: var(--color-fondo); padding: 15px; border-radius: var(--radio-elemento); border: 1px solid var(--color-borde); display: flex; flex-direction: column; gap: 10px;">
+                <h4 style="color: var(--color-primario); margin-bottom: 5px; font-weight: 800;">¿Cómo jugar? 🎮</h4>
+                <p style="font-size: 0.85rem; line-height: 1.4; color: var(--color-texto-principal); margin: 0;"><strong>1. Observa:</strong> Verás respuestas anónimas y graciosas de tus compañeros en tu pantalla.</p>
+                <p style="font-size: 0.85rem; line-height: 1.4; color: var(--color-texto-principal); margin: 0;"><strong>2. Adivina:</strong> Toca una respuesta, selecciona al compañero que crees que la escribió y dale a <em>Proponer Match</em>.</p>
+                <p style="font-size: 0.85rem; line-height: 1.4; color: var(--color-texto-principal); margin: 0;"><strong>3. Interactúa:</strong> Acércate físicamente a la persona. Ella debe confirmar el match en su celular.</p>
+                <p style="font-size: 0.85rem; line-height: 1.4; color: var(--color-texto-principal); margin: 0;"><strong>4. Puntos:</strong> +2 puntos por aciertos, -1 por error. 🚨 <strong>¡Cuidado!</strong> Si rechazas un match que sí es tuyo, se te restará -1 punto por sabotaje.</p>
+            </div>
         </div>
 
         <!-- Fase 1: Juego Activo (Adivinar) -->
@@ -78,11 +86,10 @@
                 <blockquote id="modal-dato-texto">"Respuesta"</blockquote>
                 
                 <div class="campo">
-                    <label for="selector-participantes">Selecciona al compañero:</label>
-                    <select id="selector-participantes">
-                        <option value="">-- Elige a un compañero --</option>
-                        <!-- Se llena con JS -->
-                    </select>
+                    <label>Selecciona al compañero:</label>
+                    <div id="selector-participantes-container" class="grid-participantes-modal">
+                        <!-- Se llena con JS en forma de botones de opción única -->
+                    </div>
                 </div>
                 
                 <p class="aviso-modal">Acércate físicamente a la persona antes de presionar el botón.</p>
